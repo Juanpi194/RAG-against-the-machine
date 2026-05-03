@@ -1,0 +1,12 @@
+[project]
+name = "rag"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "jsonloader>=0.9.1",
+    "langchain>=1.2.15",
+    "langchain-text-splitters>=1.1.1",
+    "tiktoken>=0.12.0",
+]
