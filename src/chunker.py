@@ -27,12 +27,52 @@ def _split_by_size(text: str, file_path: str, max_chunk_size: int, overlap: int 
     return chunk_list
 
 
-def chunk_python(text: str, file_path: str, max_chunk_size: int) -> list[Chunk]:
-    ...
+def _chunk_python(text: str, file_path: str, max_chunk_size: int) -> list[Chunk]:
+    chunk_list: list[Chunk] = []
+
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        chunk_list.extend(_split_by_size(text, file_path,
+                                         max_chunk_size))
+        return chunk_list
+
+    lines = text.splitlines(keepends=True)
+    line_offsets = [0]
+    for line in lines:
+        line_offsets.append(line_offsets[-1] + len(line))
+
+    segments: list[tuple[int, int]] = []
+    for node in ast.iter_child_nodes(tree):
+        start = line_offsets[node.lineno - 1]
+        end = line_offsets[node.end_lineno]
+        if end - start > max_chunk_size:
+            sub_chunks = _split_by_size(text[start:end], file_path, max_chunk_size)
+            for chunk in sub_chunks:
+                chunk.first_character_index += start
+                chunk.last_character_index += start
+            chunk_list.extend(sub_chunks)
+        else:
+            segments.append((start, end))
+
+    if not segments:
+        return chunk_list
+
+    group_start, group_end = segments[0]
+    for sec_start, sec_end in segments[1:]:
+        if (sec_end - group_start) > max_chunk_size:
+            chunk_list.append(Chunk(file_path, group_start, group_end,
+                                    text[group_start:group_end]))
+            group_start = sec_start
+            group_end = sec_end
+        else:
+            group_end = sec_end
+    chunk_list.append(Chunk(file_path, group_start, group_end,
+                            text[group_start:group_end]))
+    return chunk_list
 
 
-def chunk_markdown(text: str, file_path: str, max_chunk_size: int) -> list[Chunk]:
-    # TODO: Finish this function
+def _chunk_markdown(text: str, file_path: str, max_chunk_size: int) -> list[Chunk]:
     chunk_list: list[Chunk] = []
 
     lines = text.splitlines(keepends=True)
@@ -45,7 +85,7 @@ def chunk_markdown(text: str, file_path: str, max_chunk_size: int) -> list[Chunk
 
     if not hash_lines:
         return _split_by_size(text, file_path, max_chunk_size)
-    
+
     sections: list[tuple[int, int]] = []
     for i in range(len(hash_lines)):
         sec_start = hash_lines[i]
@@ -56,21 +96,28 @@ def chunk_markdown(text: str, file_path: str, max_chunk_size: int) -> list[Chunk
         sections.append((sec_start, sec_end))
 
     group_start, group_end = sections[0]
-    i = 0
-    while group_end != len(text):
-        i += 1
-        if group_end - group_start <= max_chunk_size:
-            group_end = sections[i][1]
-            # Making bigger chunk
-        else:
-            chunk_list.append(Chunk(file_path, group_start,
-                                    group_end,
+    for sec_start, sec_end in sections[1:]:
+        if sec_end - sec_start > max_chunk_size:
+            if group_end > group_start:
+                chunk_list.append(Chunk(file_path, group_start, group_end,
+                                        text[group_start:group_end]))
+            sub_chunks = _split_by_size(text[sec_start:sec_end], file_path, max_chunk_size)
+            for chunk in sub_chunks:
+                chunk.first_character_index += sec_start
+                chunk.last_character_index += sec_start
+            chunk_list.extend(sub_chunks)
+            group_start = sec_end
+            group_end = sec_end
+        elif (sec_end - group_start) > max_chunk_size:
+            chunk_list.append(Chunk(file_path, group_start, group_end,
                                     text[group_start:group_end]))
-            group_start, group_end = sections[i]
-            # Chunk finished
-    chunk_list.append(Chunk(file_path, group_start,
-                            group_end,
+            group_start = sec_start
+            group_end = sec_end
+        else:
+            group_end = sec_end
+    chunk_list.append(Chunk(file_path, group_start, group_end,
                             text[group_start:group_end]))
+    return chunk_list
 
 
 def chunk_file(file_path: str, max_chunk_size: int) -> list[Chunk]:
@@ -90,9 +137,9 @@ def chunk_file(file_path: str, max_chunk_size: int) -> list[Chunk]:
         return []
 
     if file_path.endswith(".py"):
-        chunk_list = chunk_python(text, file_path, max_chunk_size)
+        chunk_list = _chunk_python(text, file_path, max_chunk_size)
     elif file_path.endswith(".md"):
-        chunk_list = chunk_markdown(text, file_path, max_chunk_size)
+        chunk_list = _chunk_markdown(text, file_path, max_chunk_size)
     else:
         chunk_list = _split_by_size(text, file_path, max_chunk_size)
     return chunk_list

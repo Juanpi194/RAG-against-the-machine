@@ -1,4 +1,4 @@
-from .print_utils import print_error
+from .print_utils import print_error, print_debug
 
 
 def is_file_available(file_path: str) -> bool:
@@ -8,8 +8,8 @@ def is_file_available(file_path: str) -> bool:
     False will be returned.
     """
     try:
-        f = open(file_path, "r")
-        f.close()
+        with open(file_path, "r") as f:
+            print_debug(f"File {file_path} is available")
         return True
     except FileNotFoundError as e:
         print_error(str(e), exit_program=False)
