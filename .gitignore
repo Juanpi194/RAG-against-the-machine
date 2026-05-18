@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.mypy_cache/
+
+# Virtual environment
+.venv/
+
+# Data (no subir al repo)
+data/
+
+# Model weights
+*.bin
+*.safetensors
+
+# HuggingFace cache
+~/.cache/huggingface/
+
+# IDE
+.vscode/
+.idea/

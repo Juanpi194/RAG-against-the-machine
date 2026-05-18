@@ -1,10 +1,6 @@
 SRC = src
 
-ENTRY_POINT = pac-man.py
-CONFIG_FILE = config.jsonc
 VENV = .venv
-
-REQUIREMENTS_FILE = requirements.txt
 
 COLOR_RESET			:= \033[0m
 COLOR_GRAY			:= \033[0;30m
@@ -26,12 +22,7 @@ UNDERLINE_OFF       := \033[24m
 
 
 run:
-	# TODO
-	uv run python3 $(ENTRY_POINT) $(CONFIG_FILE)
-
-run_module:
-	# TODO
-	@python3 -m $(SRC)
+	uv run python3 -m $(SRC)
 
 venv:
 	@echo "⚙️  $(COLOR_LIGHT_GRAY)Creating a virtual environment $(UNDERLINE)using uv$(UNDERLINE_OFF)...$(COLOR_RESET) ⚙️"
@@ -44,38 +35,10 @@ uv-install:
 	@curl -LsSf https://astral.sh/uv/install.sh | sh
 
 install:
-	@echo "$(COLOR_RED) THIS IS ONLY NEEDED IF YOU ARE NOT USING $(UNDERLINE)UV$(UNDERLINE_OFF)$(COLOR_RESET)"
-	@echo "⚠️  $(COLOR_YELLOW)Make sure you are in a $(UNDERLINE)virtual environment$(UNDERLINE_OFF) \
-	before installing the dependencies!$(COLOR_RESET) ⚠️"
-
-	@read -p "Are you in the virtual environment? (yes/no) " answer; \
-	if [ -z "$$answer" ]; then \
-		echo "⛔ Answer was not provided. ⛔"; \
-		echo "$(COLOR_RED)Aborting...$(COLOR_RESET)"; \
-		exit 1; \
-	fi; \
-	if [ "$$answer" = "no" ]; then \
-		echo "📦 Make sure to be in the virtual environment before installing the packages. 📦"; \
-		echo "$(COLOR_LIGHT_GREEN)Use the rule $(COLOR_YELLOW)venv$(COLOR_LIGHT_GREEN) to create it."; \
-		echo "$(COLOR_RED)Aborting...$(COLOR_RESET)"; \
-		exit 1; \
-	fi; \
-	if [ ! "$$answer" = "yes" ]; then \
-		echo "🚩🚩🚩 Answer provided is not correct. 🚩🚩🚩"; \
-		echo "$(COLOR_RED)Aborting...$(COLOR_RESET)"; \
-		exit 1; \
-	fi;
-	@echo "⚒$(COLOR_GRAY) Installing required packages... $(COLOR_RESET)⚒"
-	@if [ -f "$(REQUIREMENTS_FILE)" ]; then \
-		pip install -r $(REQUIREMENTS_FILE); \
-		echo "✅ $(COLOR_GREEN)Installation was successful!$(COLOR_RESET)"; \
-	else \
-		echo "$(REQUIREMENTS_FILE) is missing!"; \
-		echo "❌ $(COLOR_RED)Installation failed$(COLOR_RESET)"; \
-	fi
+	@uv sync
 
 debug:
-	@python3 -m pdb $(ENTRY_POINT)
+	@uv run python3 -m pdb -m $(SRC)
 
 clean:
 	@echo "🧹 $(COLOR_GRAY)Cleaning __pycache__ and .mypy_cache directories...$(COLOR_RESET) 🧹"
@@ -88,40 +51,27 @@ clean:
 	@echo "⭐ $(COLOR_LIGHT_GREEN)Cleanup was successful$(COLOR_RESET) ⭐"
 
 lint:
-	@python3 -m flake8 $(ENTRY_POINT) $(SRC)
+	@python3 -m flake8 $(SRC)
 	@echo "🟢 $(COLOR_LIGHT_GREEN)$(UNDERLINE)flake8$(UNDERLINE_OFF) passed!$(COLOR_RESET) 🟢"
-	@python3 -m mypy $(ENTRY_POINT) $(SRC) --warn-return-any \
+	@python3 -m mypy $(SRC) --warn-return-any \
 		--warn-unused-ignores --ignore-missing-imports \
 		--disallow-untyped-defs --check-untyped-defs
 	@echo "🟢 $(COLOR_LIGHT_GREEN)$(UNDERLINE)mypy$(UNDERLINE_OFF) passed!$(COLOR_RESET) 🟢"
 
 lint-strict:
-	@python3 -m flake8 $(ENTRY_POINT) $(SRC)
+	@python3 -m flake8 $(SRC)
 	@echo "🟢 $(COLOR_LIGHT_GREEN)$(UNDERLINE)flake8$(UNDERLINE_OFF) passed!$(COLOR_RESET) 🟢"
-	@mypy $(ENTRY_POINT) $(SRC) --strict
+	@mypy $(SRC) --strict
 	@echo "🟢 $(COLOR_LIGHT_GREEN)$(UNDERLINE)mypy$(UNDERLINE_OFF) --strict passed!$(COLOR_RESET) 🟢"
-
-build windows:
-	@echo "⚙️  $(COLOR_LIGHT_GRAY)Building executable for Windows...$(COLOR_RESET) ⚙️"
-	@uv run python build/build.py --target windows
-	@echo "✅ $(COLOR_GREEN)Build finished! Executable: 'dist_windows/Pacman/Pacman.exe'$(COLOR_RESET)"
-
-build linux:
-	@echo "⚙️  $(COLOR_LIGHT_GRAY)Building executable for Linux...$(COLOR_RESET) ⚙️"
-	@uv run python build/build.py --target linux
-	@echo "✅ $(COLOR_GREEN)Build finished! Executable: 'dist_linux/Pacman/Pacman'$(COLOR_RESET)"
 
 help:
 	@echo ""
 	@echo "🛠  $(COLOR_GREEN)AVAILABLE COMMANDS$(COLOR_RESET)  🛠"
 	@echo ""
 
-	@echo "$(COLOR_LIGHT_YELLOW)run$(COLOR_RESET)\t\tExecutes the main.py."
+	@echo "$(COLOR_LIGHT_YELLOW)run$(COLOR_RESET)\t\tExecutes the src module."
 	@echo ""
-	
-	@echo "$(COLOR_LIGHT_YELLOW)run_module$(COLOR_RESET)\tExecutes the src folder as a module."
-	@echo ""
-	
+
 	@echo "$(COLOR_LIGHT_YELLOW)venv$(COLOR_RESET)\t\tCreates a virtual environment called '$(VENV)' (Done by uv)."
 	@echo ""
 	
@@ -143,4 +93,4 @@ help:
 	@echo "$(COLOR_LIGHT_YELLOW)lint-strict$(COLOR_RESET)\tRuns the flake8 and mypy modules with the strict flag."
 	@echo ""
 
-.PHONY: install run run_module venv install debug clean lint lint-strict "build windows" "build linux" help
+.PHONY: install run run_module venv install debug clean lint lint-strict  help
