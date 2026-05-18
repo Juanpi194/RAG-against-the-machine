@@ -22,7 +22,7 @@ UNDERLINE_OFF       := \033[24m
 
 
 run:
-	uv run python3 -m $(SRC)
+	@uv run python3 -m $(SRC)
 
 venv:
 	@echo "⚙️  $(COLOR_LIGHT_GRAY)Creating a virtual environment $(UNDERLINE)using uv$(UNDERLINE_OFF)...$(COLOR_RESET) ⚙️"

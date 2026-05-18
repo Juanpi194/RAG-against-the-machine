@@ -1,0 +1,17 @@
+# Indexar el repositorio
+uv run python -m src index data/raw/vllm-0.10.1 data/processed
+
+# Buscar una query
+uv run python -m src search "tu pregunta aquí" --k 5
+
+# Buscar un dataset entero
+uv run python -m src search_dataset <ruta_dataset> <directorio_salida> --k 10
+
+# Responder una query
+uv run python -m src answer "tu pregunta aquí" --k 5
+
+# Responder un dataset
+uv run python -m src answer_dataset <ruta_resultados> <directorio_salida>
+
+# Evaluar
+uv run python -m src evaluate <ruta_resultados> <ruta_dataset_answered>
