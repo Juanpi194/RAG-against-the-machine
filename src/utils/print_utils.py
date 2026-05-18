@@ -6,7 +6,7 @@ from webcolors import name_to_rgb
 
 from .colors import Color
 
-DEBUG: bool = True
+DEBUG: bool = False
 
 
 def print_string_in_color(s: str, color: Color | None = None,

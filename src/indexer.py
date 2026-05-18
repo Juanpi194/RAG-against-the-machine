@@ -2,6 +2,7 @@ from pathlib import Path
 import bm25s
 import json
 import dataclasses
+from tqdm import tqdm
 
 from .chunker import chunk_file, Chunk
 
@@ -14,7 +15,7 @@ def index(repo_path: str, save_dir: str, max_chunk_size: int = 2000) -> None:
              f.suffix in VALID_EXTENSIONS and f.is_file()]
 
     chunks: list[Chunk] = []
-    for file in files:
+    for file in tqdm(files, desc="Indexing files"):
         chunks.extend(chunk_file(str(file), max_chunk_size))
 
     corpus = [chunk.content for chunk in chunks]

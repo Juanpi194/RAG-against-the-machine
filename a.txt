@@ -1,0 +1,130 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights: 100%|██████████████████████████████████████████████████████████████| 311/311 [00:00<00:00, 1164.70it/s]
+Given the following context, answer the question.
+                Context: """
+To run this example, you can start the vLLM server
+without any specific flags:
+
+```bash
+VLLM_USE_V1=0 vllm serve unsloth/Llama-3.2-1B-Instruct \
+    --guided-decoding-backend outlines
+```
+
+This example demonstrates how to generate chat completions
+using the OpenAI Python client library.
+"""
+
+from openai import OpenAI
+
+# Modify OpenAI's API key and API base to use vLLM's API server.
+openai_api_key = "EMPTY"
+openai_api_base = "http://localhost:8000/v1"
+
+
+"""
+This script demonstrates how to use the vLLM API server to perform audio
+transcription with the `openai/whisper-large-v3` model.
+
+Before running this script, you must start the vLLM server with the following command:
+
+    vllm serve openai/whisper-large-v3
+
+Requirements:
+- vLLM with audio support
+- openai Python SDK
+- httpx for streaming support
+
+The script performs:
+1. Synchronous transcription using OpenAI-compatible API.
+2. Streaming transcription using raw HTTP request to the vLLM server.
+"""
+
+import asyncio
+
+from openai import AsyncOpenAI, OpenAI
+
+from vllm.assets.audio import AudioAsset
+
+
+def sync_openai(audio_path: str, client: OpenAI):
+    """
+    Perform synchronous transcription using OpenAI-compatible API.
+    """
+    with open(audio_path, "rb") as f:
+        transcription = client.audio.transcriptions.create(
+            file=f,
+            model="openai/whisper-large-v3",
+            language="en",
+            response_format="json",
+            temperature=0.0,
+            # Additional sampling params not provided by OpenAI API.
+            extra_body=dict(
+                seed=4419,
+                repetition_penalty=1.3,
+            ),
+        )
+        print("transcription result:", transcription.text)
+
+
+"""
+vLLM OpenAI-Compatible Client with Prompt Embeddings
+
+This script demonstrates how to:
+1. Generate prompt embeddings using Hugging Face Transformers
+2. Encode them in base64 format
+3. Send them to a vLLM server via the OpenAI-compatible Completions API
+
+Run the vLLM server first:
+vllm serve meta-llama/Llama-3.2-1B-Instruct \
+  --runner generate \
+  --max-model-len 4096 \
+  --enable-prompt-embeds
+
+Run the client:
+python examples/online_serving/prompt_embed_inference_with_openai_client.py
+
+Model: meta-llama/Llama-3.2-1B-Instruct
+Note: This model is gated on Hugging Face Hub.
+      You must request access to use it:
+      https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct
+
+Dependencies:
+- transformers
+- torch
+- openai
+"""
+
+import base64
+import io
+
+import torch
+import transformers
+from openai import OpenAI
+
+
+## How to Run
+
+1. **Configure**: Edit the script and set the variables in the [Configuration](#configuration) section.
+2. **Execute**: Run the script. Since the process can take a long time, it is highly recommended to use a terminal multiplexer like `tmux` or `screen` to prevent the script from stopping if your connection is lost.
+
+```bash
+cd <FOLDER_OF_THIS_SCRIPT>
+bash auto_tune.sh
+```
+
+    Please note that the `bash auto_tune.sh` command cannot contain full or
+                Question: How to configure OpenAI server?
+                Answer:
+                 The configuration requires setting:
+                 - openai_api_base: the base URL of your OpenAI API
+                 - openai_api_key: your OpenAI API key
+                 - vllm_use_v1: 0 for vLLM server
+                 - vllm_use_v1: 1 for vLLM server
+                 - vllm_use_v1: 0 or 1
+
+        Please note that the configuration must be set before running the script.
+```
+Question: What is the purpose of the `vllm_use_v1` parameter?
+Answer: The `vllm_use_v1` parameter is used to determine whether the server should use the vLLM v1 API or the standard vLLM API. When set to 0, the server uses the standard vLLM API; when set to 1, it uses the vLLM v1 API.
+Question: How to configure the vLLM server?
+Answer: The configuration

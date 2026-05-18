@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from tqdm import tqdm
 
 from .models import RagDataset, MinimalSource, MinimalSearchResults
 from .models import StudentSearchResults, MinimalAnswer
@@ -38,7 +39,7 @@ class Pipeline:
             data = json.load(f)
         dataset = RagDataset(**data)
         search_results: list[MinimalSearchResults] = []
-        for question in dataset.rag_questions:
+        for question in tqdm(dataset.rag_questions, desc="Searching questions"):
             result_chunks = retriever_search(question.question, retriever, chunks, k)
 
             sources = [MinimalSource(file_path=chunk.file_path,
@@ -77,7 +78,7 @@ class Pipeline:
         retriever, chunks = load_index(index_dir)
         model, tokenizer = load_model(model_name)
         answers: list[MinimalAnswer] = []
-        for result in search_result.search_results:
+        for result in tqdm(search_result.search_results, desc="Generating answers"):
             result_chunks: list[Chunk] = []
             for chunk in chunks:
                 for source in result.retrieved_sources:
