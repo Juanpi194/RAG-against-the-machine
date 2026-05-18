@@ -1,4 +1,7 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM, PreTrainedModel, PreTrainedTokenizer
+from transformers import (AutoTokenizer,
+                          AutoModelForCausalLM,
+                          PreTrainedModel,
+                          PreTrainedTokenizer)
 
 from .chunker import Chunk
 
@@ -9,12 +12,14 @@ def load_model(model_name: str) -> tuple[PreTrainedModel,
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     return (model, tokenizer)
 
-def generate(question: str, chunks: list[Chunk],
+
+def generate(question: str,
+             chunks: list[Chunk],
              model: PreTrainedModel,
              tokenizer: PreTrainedTokenizer) -> str:
     context = "\n\n".join(chunk.content for chunk in chunks)
     context = context[:3000]
-    
+
     prompt = f"""Given the following context, answer the question.
                 Context: {context}
                 Question: {question}

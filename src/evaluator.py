@@ -13,16 +13,20 @@ def overlap_ratio(source_a: MinimalSource, source_b: MinimalSource) -> float:
     if start_overlap >= end_overlap:
         return 0.0
     overlap = end_overlap - start_overlap
-    return overlap / (source_a.last_character_index - source_a.first_character_index)
+    return (overlap /
+            (source_a.last_character_index - source_a.first_character_index))
 
-def is_found(retrieved_sources: list[MinimalSource], correct_source: MinimalSource) -> bool:
+
+def is_found(retrieved_sources: list[MinimalSource],
+             correct_source: MinimalSource) -> bool:
     for source in retrieved_sources:
         if overlap_ratio(source, correct_source) >= 0.05:
             return True
     return False
 
 
-def recall_at_k(questions: list[AnsweredQuestion], search_results: StudentSearchResults) -> float:
+def recall_at_k(questions: list[AnsweredQuestion],
+                search_results: StudentSearchResults) -> float:
     scores = []
     for question in questions:
         found = 0

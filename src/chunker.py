@@ -15,7 +15,8 @@ class Chunk:
     content: str
 
 
-def _split_by_size(text: str, file_path: str, max_chunk_size: int, overlap: int = 200) -> list[Chunk]:
+def _split_by_size(text: str, file_path: str,
+                   max_chunk_size: int, overlap: int = 200) -> list[Chunk]:
     chunk_list: list[Chunk] = []
     start = 0
     end = min(start + max_chunk_size, len(text))
@@ -27,7 +28,8 @@ def _split_by_size(text: str, file_path: str, max_chunk_size: int, overlap: int 
     return chunk_list
 
 
-def _chunk_python(text: str, file_path: str, max_chunk_size: int) -> list[Chunk]:
+def _chunk_python(text: str, file_path: str,
+                  max_chunk_size: int) -> list[Chunk]:
     chunk_list: list[Chunk] = []
 
     try:
@@ -47,7 +49,8 @@ def _chunk_python(text: str, file_path: str, max_chunk_size: int) -> list[Chunk]
         start = line_offsets[node.lineno - 1]
         end = line_offsets[node.end_lineno]
         if end - start > max_chunk_size:
-            sub_chunks = _split_by_size(text[start:end], file_path, max_chunk_size)
+            sub_chunks = _split_by_size(text[start:end],
+                                        file_path, max_chunk_size)
             for chunk in sub_chunks:
                 chunk.first_character_index += start
                 chunk.last_character_index += start
@@ -72,7 +75,8 @@ def _chunk_python(text: str, file_path: str, max_chunk_size: int) -> list[Chunk]
     return chunk_list
 
 
-def _chunk_markdown(text: str, file_path: str, max_chunk_size: int) -> list[Chunk]:
+def _chunk_markdown(text: str, file_path: str,
+                    max_chunk_size: int) -> list[Chunk]:
     chunk_list: list[Chunk] = []
 
     lines = text.splitlines(keepends=True)
@@ -101,7 +105,8 @@ def _chunk_markdown(text: str, file_path: str, max_chunk_size: int) -> list[Chun
             if group_end > group_start:
                 chunk_list.append(Chunk(file_path, group_start, group_end,
                                         text[group_start:group_end]))
-            sub_chunks = _split_by_size(text[sec_start:sec_end], file_path, max_chunk_size)
+            sub_chunks = _split_by_size(text[sec_start:sec_end],
+                                        file_path, max_chunk_size)
             for chunk in sub_chunks:
                 chunk.first_character_index += sec_start
                 chunk.last_character_index += sec_start
@@ -124,10 +129,12 @@ def chunk_file(file_path: str, max_chunk_size: int) -> list[Chunk]:
     if not is_file_available(file_path):
         raise Exception(f"File {file_path} is not available")
     if max_chunk_size > MAX_CHUNK_SIZE:
-        raise ValueError(f"Chunk size '{max_chunk_size}' is greater than maxi allowed. "
+        raise ValueError(f"Chunk size '{max_chunk_size}' is greater "
+                         "than maxi allowed. "
                          f"Maximum size is '{MAX_CHUNK_SIZE}'")
     elif max_chunk_size <= 0:
-        raise ValueError(f"Chunk size must be a positive number ('{max_chunk_size}' given)")
+        raise ValueError(f"Chunk size must be a positive number "
+                         f"('{max_chunk_size}' given)")
 
     # It will not fail because we already checked if the file is available
     with open(file_path, "r", encoding="utf-8", errors="replace") as f:
