@@ -8,7 +8,7 @@ def is_file_available(file_path: str) -> bool:
     False will be returned.
     """
     try:
-        with open(file_path, "r") as f:
+        with open(file_path, "r"):
             print_debug(f"File {file_path} is available")
         return True
     except FileNotFoundError as e:
