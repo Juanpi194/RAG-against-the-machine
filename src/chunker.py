@@ -46,8 +46,12 @@ def _chunk_python(text: str, file_path: str,
 
     segments: list[tuple[int, int]] = []
     for node in ast.iter_child_nodes(tree):
-        start = line_offsets[node.lineno - 1]
-        end = line_offsets[node.end_lineno]
+        lineno = getattr(node, "lineno", None)
+        end_lineno = getattr(node, "end_lineno", None)
+        if lineno is None or end_lineno is None:
+            continue
+        start = line_offsets[lineno - 1]
+        end = line_offsets[end_lineno]
         if end - start > max_chunk_size:
             sub_chunks = _split_by_size(text[start:end],
                                         file_path, max_chunk_size)

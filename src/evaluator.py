@@ -13,8 +13,9 @@ def overlap_ratio(source_a: MinimalSource, source_b: MinimalSource) -> float:
     if start_overlap >= end_overlap:
         return 0.0
     overlap = end_overlap - start_overlap
-    return (overlap /
-            (source_a.last_character_index - source_a.first_character_index))
+    return float(overlap /
+                 (source_a.last_character_index - (
+                     source_a.first_character_index)))
 
 
 def is_found(retrieved_sources: list[MinimalSource],

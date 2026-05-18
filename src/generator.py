@@ -27,5 +27,5 @@ def generate(question: str,
                 """
     inputs = tokenizer(prompt, return_tensors="pt")
     outputs = model.generate(**inputs, max_new_tokens=200)
-    answer = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    answer = str(tokenizer.decode(outputs[0], skip_special_tokens=True))
     return answer
