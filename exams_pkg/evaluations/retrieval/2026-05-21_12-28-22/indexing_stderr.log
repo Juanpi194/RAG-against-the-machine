@@ -1,0 +1,6 @@
+ERROR: The function received no value for the required argument: repo_path
+Usage: __main__.py index REPO_PATH SAVE_DIR <flags>
+  optional flags:        --max_chunk_size
+
+For detailed information on this command, run:
+  __main__.py index --help

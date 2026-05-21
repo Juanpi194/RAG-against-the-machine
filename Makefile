@@ -51,17 +51,17 @@ clean:
 	@echo "⭐ $(COLOR_LIGHT_GREEN)Cleanup was successful$(COLOR_RESET) ⭐"
 
 lint:
-	@python3 -m flake8 $(SRC)
+	@uv run python3 -m flake8 $(SRC)
 	@echo "🟢 $(COLOR_LIGHT_GREEN)$(UNDERLINE)flake8$(UNDERLINE_OFF) passed!$(COLOR_RESET) 🟢"
-	@python3 -m mypy $(SRC) --warn-return-any \
+	@uv run python3 -m mypy $(SRC) --warn-return-any \
 		--warn-unused-ignores --ignore-missing-imports \
 		--disallow-untyped-defs --check-untyped-defs
 	@echo "🟢 $(COLOR_LIGHT_GREEN)$(UNDERLINE)mypy$(UNDERLINE_OFF) passed!$(COLOR_RESET) 🟢"
 
 lint-strict:
-	@python3 -m flake8 $(SRC)
+	@uv run python3 -m flake8 $(SRC)
 	@echo "🟢 $(COLOR_LIGHT_GREEN)$(UNDERLINE)flake8$(UNDERLINE_OFF) passed!$(COLOR_RESET) 🟢"
-	@mypy $(SRC) --strict
+	@uv run python3 -m mypy $(SRC) --strict
 	@echo "🟢 $(COLOR_LIGHT_GREEN)$(UNDERLINE)mypy$(UNDERLINE_OFF) --strict passed!$(COLOR_RESET) 🟢"
 
 help:

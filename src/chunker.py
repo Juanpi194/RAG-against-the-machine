@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from pydantic import BaseModel
 import ast
 
 from .utils import is_file_available
@@ -7,8 +7,16 @@ from .utils import is_file_available
 MAX_CHUNK_SIZE = 2000
 
 
-@dataclass
-class Chunk:
+class Chunk(BaseModel):
+    """
+    Represents a discrete segment of a file.
+
+    Attributes:
+        file_path: The relative path to the original file.
+        first_character_index: The global character offset of the chunk start.
+        last_character_index: The global character offset of the chunk end.
+        content: The actual text content of the chunk.
+    """
     file_path: str
     first_character_index: int
     last_character_index: int
@@ -17,27 +25,51 @@ class Chunk:
 
 def _split_by_size(text: str, file_path: str,
                    max_chunk_size: int, overlap: int = 200) -> list[Chunk]:
+    """
+    Split text into fixed-size chunks with a sliding window.
+
+    Args:
+        text: The raw string to be split.
+        file_path: The source file path for metadata.
+        max_chunk_size: Maximum characters per chunk.
+        overlap: Number of characters to overlap between chunks.
+
+    Returns:
+        A list of Chunk objects.
+    """
     chunk_list: list[Chunk] = []
+    text_len = len(text)
+    if text_len == 0:
+        return []
+
     start = 0
-    end = min(start + max_chunk_size, len(text))
-    while end != len(text):
-        chunk_list.append(Chunk(file_path, start, end, text[start:end]))
+    while start < text_len:
+        end = min(start + max_chunk_size, text_len)
+        chunk_list.append(Chunk(file_path=file_path,
+                                first_character_index=start,
+                                last_character_index=end,
+                                content=text[start:end]))
+        if end == text_len:
+            break
         start = end - overlap
-        end = min(start + max_chunk_size, len(text))
-    chunk_list.append(Chunk(file_path, start, end, text[start:end]))
+        if start >= text_len or start < 0:
+            break
+        if start <= chunk_list[-1].first_character_index:
+            start = end
     return chunk_list
 
 
 def _chunk_python(text: str, file_path: str,
                   max_chunk_size: int) -> list[Chunk]:
+    """
+    Chunk Python code using its Abstract Syntax Tree (AST).
+    """
     chunk_list: list[Chunk] = []
 
     try:
         tree = ast.parse(text)
     except SyntaxError:
-        chunk_list.extend(_split_by_size(text, file_path,
-                                         max_chunk_size))
-        return chunk_list
+        return _split_by_size(text, file_path, max_chunk_size)
 
     lines = text.splitlines(keepends=True)
     line_offsets = [0]
@@ -51,38 +83,51 @@ def _chunk_python(text: str, file_path: str,
         if lineno is None or end_lineno is None:
             continue
         start = line_offsets[lineno - 1]
-        end = line_offsets[end_lineno]
-        if end - start > max_chunk_size:
-            sub_chunks = _split_by_size(text[start:end],
-                                        file_path, max_chunk_size)
-            for chunk in sub_chunks:
-                chunk.first_character_index += start
-                chunk.last_character_index += start
-            chunk_list.extend(sub_chunks)
-        else:
-            segments.append((start, end))
+        end = min(line_offsets[end_lineno], len(text))
+        segments.append((start, end))
 
     if not segments:
-        return chunk_list
+        return _split_by_size(text, file_path, max_chunk_size)
 
     group_start, group_end = segments[0]
     for sec_start, sec_end in segments[1:]:
         if (sec_end - group_start) > max_chunk_size:
-            chunk_list.append(Chunk(file_path, group_start, group_end,
-                                    text[group_start:group_end]))
-            group_start = sec_start
-            group_end = sec_end
+            content = text[group_start:group_end]
+            if len(content) > max_chunk_size:
+                sub_chunks = _split_by_size(content, file_path, max_chunk_size)
+                for sc in sub_chunks:
+                    sc.first_character_index += group_start
+                    sc.last_character_index += group_start
+                chunk_list.extend(sub_chunks)
+            else:
+                chunk_list.append(Chunk(file_path=file_path,
+                                        first_character_index=group_start,
+                                        last_character_index=group_end,
+                                        content=content))
+            group_start, group_end = sec_start, sec_end
         else:
             group_end = sec_end
-    chunk_list.append(Chunk(file_path, group_start, group_end,
-                            text[group_start:group_end]))
+
+    content = text[group_start:group_end]
+    if len(content) > max_chunk_size:
+        sub_chunks = _split_by_size(content, file_path, max_chunk_size)
+        for sc in sub_chunks:
+            sc.first_character_index += group_start
+            sc.last_character_index += group_start
+        chunk_list.extend(sub_chunks)
+    else:
+        chunk_list.append(Chunk(file_path=file_path,
+                                first_character_index=group_start,
+                                last_character_index=group_end,
+                                content=content))
     return chunk_list
 
 
 def _chunk_markdown(text: str, file_path: str,
                     max_chunk_size: int) -> list[Chunk]:
-    chunk_list: list[Chunk] = []
-
+    """
+    Chunk Markdown files based on header sections.
+    """
     lines = text.splitlines(keepends=True)
     offset = 0
     hash_lines: list[int] = []
@@ -97,50 +142,55 @@ def _chunk_markdown(text: str, file_path: str,
     sections: list[tuple[int, int]] = []
     for i in range(len(hash_lines)):
         sec_start = hash_lines[i]
-        if i + 1 < len(hash_lines):
-            sec_end = hash_lines[i + 1]
-        else:
-            sec_end = len(text)
+        sec_end = hash_lines[i + 1] if i + 1 < len(hash_lines) else len(text)
         sections.append((sec_start, sec_end))
 
+    chunk_list: list[Chunk] = []
     group_start, group_end = sections[0]
     for sec_start, sec_end in sections[1:]:
-        if sec_end - sec_start > max_chunk_size:
-            if group_end > group_start:
-                chunk_list.append(Chunk(file_path, group_start, group_end,
-                                        text[group_start:group_end]))
-            sub_chunks = _split_by_size(text[sec_start:sec_end],
-                                        file_path, max_chunk_size)
-            for chunk in sub_chunks:
-                chunk.first_character_index += sec_start
-                chunk.last_character_index += sec_start
-            chunk_list.extend(sub_chunks)
-            group_start = sec_end
-            group_end = sec_end
-        elif (sec_end - group_start) > max_chunk_size:
-            chunk_list.append(Chunk(file_path, group_start, group_end,
-                                    text[group_start:group_end]))
-            group_start = sec_start
-            group_end = sec_end
+        if (sec_end - group_start) > max_chunk_size:
+            content = text[group_start:group_end]
+            if len(content) > max_chunk_size:
+                sub_chunks = _split_by_size(content, file_path, max_chunk_size)
+                for sc in sub_chunks:
+                    sc.first_character_index += group_start
+                    sc.last_character_index += group_start
+                chunk_list.extend(sub_chunks)
+            else:
+                chunk_list.append(Chunk(file_path=file_path,
+                                        first_character_index=group_start,
+                                        last_character_index=group_end,
+                                        content=content))
+            group_start, group_end = sec_start, sec_end
         else:
             group_end = sec_end
-    chunk_list.append(Chunk(file_path, group_start, group_end,
-                            text[group_start:group_end]))
+
+    content = text[group_start:group_end]
+    if len(content) > max_chunk_size:
+        sub_chunks = _split_by_size(content, file_path, max_chunk_size)
+        for sc in sub_chunks:
+            sc.first_character_index += group_start
+            sc.last_character_index += group_start
+        chunk_list.extend(sub_chunks)
+    else:
+        chunk_list.append(Chunk(file_path=file_path,
+                                first_character_index=group_start,
+                                last_character_index=group_end,
+                                content=content))
     return chunk_list
 
 
 def chunk_file(file_path: str, max_chunk_size: int) -> list[Chunk]:
+    """
+    Apply type-specific chunking strategies to a file.
+    """
     if not is_file_available(file_path):
         raise Exception(f"File {file_path} is not available")
-    if max_chunk_size > MAX_CHUNK_SIZE:
-        raise ValueError(f"Chunk size '{max_chunk_size}' is greater "
-                         "than maxi allowed. "
-                         f"Maximum size is '{MAX_CHUNK_SIZE}'")
-    elif max_chunk_size <= 0:
-        raise ValueError(f"Chunk size must be a positive number "
-                         f"('{max_chunk_size}' given)")
 
-    # It will not fail because we already checked if the file is available
+    effective_max = min(max_chunk_size, MAX_CHUNK_SIZE)
+    if effective_max <= 0:
+        raise ValueError("Chunk size must be positive")
+
     with open(file_path, "r", encoding="utf-8", errors="replace") as f:
         text = f.read()
 
@@ -148,9 +198,7 @@ def chunk_file(file_path: str, max_chunk_size: int) -> list[Chunk]:
         return []
 
     if file_path.endswith(".py"):
-        chunk_list = _chunk_python(text, file_path, max_chunk_size)
-    elif file_path.endswith(".md"):
-        chunk_list = _chunk_markdown(text, file_path, max_chunk_size)
-    else:
-        chunk_list = _split_by_size(text, file_path, max_chunk_size)
-    return chunk_list
+        return _chunk_python(text, file_path, effective_max)
+    if file_path.endswith(".md"):
+        return _chunk_markdown(text, file_path, effective_max)
+    return _split_by_size(text, file_path, effective_max)
